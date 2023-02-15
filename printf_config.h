@@ -19,8 +19,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * This file is part of the Tiny Flash DataBase Library.
- *
  */
 #ifndef _PRINTF_CONFIG_H_
 #define _PRINTF_CONFIG_H_
