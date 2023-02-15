@@ -37,13 +37,8 @@
  * THE SOFTWARE.
  */
 
-// Define this globally (e.g. gcc -DPRINTF_INCLUDE_CONFIG_H=1 ...) to include the
-// printf_config.h header file
-#if PRINTF_INCLUDE_CONFIG_H
-#include "printf_config.h"
-#endif
-
-#include <printf/printf.h>
+#include "printf/printf_config.h"
+#include "printf/printf.h"
 
 #ifdef __cplusplus
 #include <cstdint>
@@ -53,16 +48,6 @@
 #include <limits.h>
 #include <stdbool.h>
 #endif // __cplusplus
-
-#if PRINTF_ALIAS_STANDARD_FUNCTION_NAMES
-# define printf_    printf
-# define sprintf_   sprintf
-# define vsprintf_  vsprintf
-# define snprintf_  snprintf
-# define vsnprintf_ vsnprintf
-# define vprintf_   vprintf
-#endif
-
 
 // 'ntoa' conversion buffer size, this must be big enough to hold one converted
 // numeric number including padded zeros (dynamically created on stack)

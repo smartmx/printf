@@ -1,77 +1,6 @@
 # Standalone printf/sprintf formatted printing function library
 
-[![tests passing](https://github.com/eyalroz/printf/actions/workflows/build_and_test.yml/badge.svg)](https://github.com/eyalroz/printf/actions/workflows/build_and_test.yml)
-[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/eyalroz/printf/master/LICENSE)
-[![Github Bug-type issues](https://shields.io/github/issues-search/eyalroz/printf?query=is:open%20is:issue%20label:bug&label=open%20bugs)](http://github.com/eyalroz/printf/issues)
-<sup>Parent repository: </sup>[![Github issues (original repo)](https://img.shields.io/github/issues/mpaland/printf.svg)](http://github.com/mpaland/printf/issues)
-<!-- Can't use Travis - they stopped offering free builds [![Build Status](https://travis-ci.com/eyalroz/printf.svg?branch=master)](https://travis-ci.com/eyalroz/printf) -->
-<!-- No releases yet... [![Github Releases](https://img.shields.io/github/release/eyalroz/printf.svg)](https://github.com/mpaland/eyalroz/releases)-->
-
-
-| Table of contents |
-|:------------------|
-|<sub>[Highlights, design goals and the fork](#highlights-design-goals-and-the-fork)<br>[Using the `printf` library in your project](#using-the-printf-library-in-your-project)<br>  - [CMake options and preprocessor definitions](#cmake-options-and-preprocessor-definitions)<br>[Library API](#library-api)<br>  - [Implemented functions](#implemented-functions)<br>  - [Supported Format Specifiers](#supported-format-specifiers)<br>  - [Return Value](#return-value)<br>[Contributing](#contributing)<br>[License](#license) </sub>|
-
-
 This is a small but **fully-loaded** implementation of C's formatted printing family of functions. It was originally designed by Marco Paland, with the primary use case being in embedded systems - where these functions are unavailable, or when one needs to avoid the memory footprint of linking against a full-fledged libc. The library can be made even smaller by partially excluding some of the supported format specifiers during compilation. The library stands alone, with **No external dependencies**.
-
-It is a fork of the original [mpaland/printf](https://github.com/mpaland/printf) repository by [Marco Paland](https://github.com/mpaland), with multiple bug fixes and a few more features.
-
-## Highlights, design goals and the fork
-
-If you use a typical libc's `sprintf()` implementation (or similar function), you are likely to pull in a *lot* of unwanted library definitions and can bloat code size - typically by as much as 20 KiB. Now, there is a boatload of so called 'tiny' `printf()`-family implementations around. So why this one? Or rather, why [mpaland/printf](https://github.com/mpaland/printf), and then why this fork? 
-
-Well, Marco tried out many of the available `printf()` implementations, but was disappointed: Some are not thread-safe; some have indirect dependencies on libc or other libraries, making them inconvenient to build and larger when compiled; some only offer extremely limited flag and specifier support; and some produce non-standard-compiled output, failing many tests no found in the repository's test suite.
-
-Marco therefore decided to write his own implementation, with the following goals in mind (I've dropped a few relative to his original description):
-
- - Very small implementation
- - NO dependencies on other packages or libraries; no multiple compiled objects, just one object file.
- - Support for all standard specifiers and flags, and all width and precision sub-specifiers (see below).
- - Support of decimal/floating number representation (with an internal, relatively fast `itoa`/`ftoa` implementation)
- - Reentrancy and thread-safety; `malloc()` freeness.
- - Clean, robust code.
- - Extensive test coverage.
- - MIT license
-
-Marco's repository upheld most of these goals - but did not quite make it all of the way. As of mid-2021, it still had many C-standard-non-compliance bugs; the test suite was quite lacking in coverage; some goals were simply discarded (like avoiding global/local-static constants) etc. The repository had become quite popular, but unfortunately, Marco had been otherwise preoccupied; he had not really touched the code in the two years prior; many bug reports were pending, and so were many pull requests from eary adopters who had fixed some of the bugs they had encountered.
-
-The author of this fork was one of the latercomer bug-reporters-and-PR-authors; and when noticing nothing was moving forward, decided to take up the same goals (sans the discarded ones); and integrate the existing forks and available PRs into a single "consensus fork" which would continue where Marco had left off. Along the way, numerous other issues were observed; the build system was improved; the test suite streamlined and expanded; and other contributors also lent a hand (especially [@mickjc750](https://github.com/mickjc750/)). We are now very close to fully realizing the project goals.
-
-## Using the `printf` library in your project
-
-**Use involving CMake:**
-
-1. Use CMake to configure, build and install the library. Then, in another CMake project, use `find_package(printf)` and make sure the library's install location is in CMake's package search path.
-2. Use CMake to configure and build the library. This results in the following files:
-
-   * An object code library file (named `printf.a`, or `printf.so`, or `printf.dll` depending on your platform and choice of static vs dynamic linking)
-   * A header file named `printf.h`
-   * (Not strictly necessary) An optional extra header file `printf_config.h` with the build configuration details.
-
-   Now, in your project, include `printf.h` and link against the library file, you're all set: There are no dependencies to satisfy or keep track of. 
-3. Use CMake's `FetchContent` module to obtain the project source code and make it part of your own project's build, e.g.:
-   ```
-   FetchContent_Declare(printf_library
-       GIT_REPOSITORY https://github.com/eyalroz/printf.git
-       GIT_TAG v12.34.45 # Replace this with a real available version
-   )
-   FetchContent_MakeAvailable(printf_library)
-   ```
-**Use not involving CMake:**
-
-4. Copy `printf.c` and `printf.h` into your own project, and compile the source however you see fit. Remember that the library requires compilation with the C99 language standard enabled.
-5. Include the contents of `printf.c` into your own code - which can be either C or C++. Remember, though, the library is written in the "intersection" of C99 and C++11, so older-standard C programs may not just accept it.
-
-Whichever way you choose to use the library:
-
-* You can have this library stand-in for the C standard library's `printf()` family of functions, e.g. provide `snprintf()` instead of `snprintf_()`, by setting an appropriate [preprocessor definition](#cmake-options-and-preprocessor-definitions) during compilation and use. 
-* Speaking of the [preprocessor definitions](#cmake-options-and-preprocessor-definitions) which affect the library's behavior - you have to be consistent in their choice when building and when using the library. (The easiest way to do that is just not to change any of them and accept the reasonable defaults.)
-* Two of the functions --- `printf_()` and `vprintf_()` --- will only be usable if you implement a `putchar_(char c)` function to  underlie them.
-* **Avoid `sprintf()` in favor of `snprintf()` for safety and security** - and that goes for the standard C library `sprintf()` as well:. `sprintf()` is unaware of the amount of memory allocated for the string it writes into, and will "happily" overflow your buffer; instead of calling it, pass your buffer size to `snprintf()` - and avoid overflow.
-
-Finally, if you've started using the library in a publicly-available (FOSS or commercial) project, please consider emailing [@eyalroz](https://github.com/eyalroz), or open an [issue](https://github.com/eyalroz/printf/issues/), to announce this.
-
 
 ### CMake options and preprocessor definitions
 
@@ -251,23 +180,6 @@ If `NULL` is passed for the `buffer` parameter, nothing is written, but the form
 ```C
 int length = sprintf(NULL, "Hello, world"); // length is set to 12
 ```
-
-## Contributing
-
-The following assumes Marco Paland's original repository remains mostly-inactive in terms of commits.
-
-0. Give this repository a :star: (even if you've already starred the original repository).
-1. Create an [issue](https://github.com/eyalroz/issues) and describe your idea. Make sure it is in line with the library's design goals.
-2. Fork the repository
-3. Create your feature branch (`git checkout -b my-new-feature`).
-4. Implement your feature/idea; don't forget to make sure all existing tests still pass.
-5. Add new checks or test-cases to the test suite - both for any problems you have identified and for any new functionality you have introduced.
-4. Commit your changes (`git commit -a -m "Added some feature"`)
-5. Publish the branch (`git push origin my-new-feature`)
-6. Create a new pull request against this repository. Note: Please don't create a PR without a related issue.
-
-I try to attend to issues and PRs promptly.
-
 
 ## License
 
