@@ -81,6 +81,9 @@ static inline void putchar_(char c)
 */
 #define PRINTF_CHECK_FOR_NUL_IN_FORMAT_SPECIFIER        1
 
+/*
+ * Support for msvc style integer specifiers (%I), comment it to disable.
+*/
 //#define PRINTF_SUPPORT_MSVC_STYLE_INTEGER_SPECIFIERS
 
 #endif /* _PRINTF_CONFIG_H_ */
